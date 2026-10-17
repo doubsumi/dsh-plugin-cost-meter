@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "updatedAt": "2026-10-18",
+  "currency": "USD",
+  "note": "Out-of-band price catalog for dsh-plugin-cost-meter. Every rate is USD per 1,000,000 tokens. `cacheMiss`/`cacheHit`/`output` are the PEAK (full) rates; the `*OffPeak` fields are the discounted rates. The plugin reads this file from its own package and, when `catalogUrl` is set (the default derives from package.json repository), re-reads the same shape from the network on an interval — pushing a new version of this file updates every installed copy without publishing a plugin release. Rates captured 2026-09 from the vendor-published table; DeepSeek announced Flash price cuts in 2026-09, so verify against https://api-docs.deepseek.com/quick_start/pricing before relying on them.",
+  "providers": {
+    "deepseek-official": {
+      "label": { "zh": "DeepSeek 官方", "en": "DeepSeek Official" },
+      "api": "openai-completions",
+      "docs": "https://api-docs.deepseek.com/quick_start/pricing",
+      "peakSchedule": {
+        "timezone": "UTC",
+        "days": [1, 2, 3, 4, 5],
+        "windows": [
+          { "from": "01:00", "to": "04:00" },
+          { "from": "06:00", "to": "10:00" }
+        ],
+        "offPeakRatio": 0.5,
+        "note": "Peak hours are 01:00-04:00 and 06:00-10:00 UTC Monday through Friday (09:00-12:00 and 14:00-18:00 Beijing); every other hour, plus the whole weekend, is off-peak at half price."
+      },
+      "models": {
+        "deepseek-flash": {
+          "label": "DeepSeek-V4.1-Flash",
+          "cacheHit": 0.006,
+          "cacheHitOffPeak": 0.003,
+          "cacheMiss": 0.3,
+          "cacheMissOffPeak": 0.15,
+          "output": 1.2,
+          "outputOffPeak": 0.6
+        },
+        "deepseek-v4-flash": {
+          "label": "DeepSeek-V4.1-Flash (legacy alias)",
+          "note": "The V4 Flash name is still accepted and served by V4.1 Flash at the Flash price.",
+          "cacheHit": 0.006,
+          "cacheHitOffPeak": 0.003,
+          "cacheMiss": 0.3,
+          "cacheMissOffPeak": 0.15,
+          "output": 1.2,
+          "outputOffPeak": 0.6
+        },
+        "deepseek-v4-pro": {
+          "label": "DeepSeek-V4-Pro-0813",
+          "cacheHit": 0.044,
+          "cacheHitOffPeak": 0.022,
+          "cacheMiss": 1.32,
+          "cacheMissOffPeak": 0.66,
+          "output": 3.96,
+          "outputOffPeak": 1.98
+        },
+        "deepseek-chat": {
+          "label": "DeepSeek Chat (legacy)",
+          "note": "Legacy flat-price model; the off-peak fields repeat the peak rate so it is never discounted.",
+          "cacheHit": 0.07,
+          "cacheHitOffPeak": 0.07,
+          "cacheMiss": 0.27,
+          "cacheMissOffPeak": 0.27,
+          "output": 1.1,
+          "outputOffPeak": 1.1
+        },
+        "deepseek-reasoner": {
+          "label": "DeepSeek Reasoner (legacy)",
+          "note": "Legacy flat-price model; the off-peak fields repeat the peak rate so it is never discounted.",
+          "cacheHit": 0.14,
+          "cacheHitOffPeak": 0.14,
+          "cacheMiss": 0.55,
+          "cacheMissOffPeak": 0.55,
+          "output": 2.19,
+          "outputOffPeak": 2.19
+        }
+      }
+    }
+  }
+}

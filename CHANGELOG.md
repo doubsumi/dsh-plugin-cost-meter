@@ -2,10 +2,31 @@
 
 All notable changes to this project are documented here.
 
+## 0.5.0
+
+- **Automatic silent price updates**: bundled `catalog/prices.json`, an
+  out-of-band remote catalog (`catalogUrl`, default derived from the package
+  repository), and a periodic refresh (`refreshMinutes`, default 360) that
+  swaps the live table in place. A failed refresh keeps the last good rates.
+- **Weekday-aware peak hours**: peak now applies only on the configured
+  weekdays (`peak.days`, default Monday–Friday), so weekends bill off-peak.
+  This fixes weekend over-billing.
+- **Explicit peak/off-peak rates**: catalog entries may carry
+  `cacheMissOffPeak` / `cacheHitOffPeak` / `outputOffPeak`; the multiplier is
+  only a fallback.
+- **Route-aware pricing**: usage is bucketed per `{ provider, model }`; lookups
+  support `provider/*`, model wildcards, and case/space/punctuation-insensitive
+  model ids. Manual config keys may be bare (`deepseek-flash`) or routed.
+- **Currency conversion**: a USD catalog can be displayed in CNY via
+  `config.fx.cnyPerUsd` (default 7.1).
+- **No fabricated prices**: a route with no matching rate reports
+  `priced: false` and the badge shows "未配置" instead of a fallback amount.
+- Projection state bumped to `stateVersion 3`; tests cover the new behaviour.
+
 ## 0.4.0
 
-- Package as a `dsh.bundle` profile layer: `dsh plugin add dsh-cost-meter` now
-  activates the plugin automatically (no manual patch row required).
+- Package as a `dsh.bundle` profile layer: `dsh plugin add dsh-plugin-cost-meter`
+  now activates the plugin automatically (no manual patch row required).
 - Split documentation into an English `README.md` and a Chinese `README.zh.md`.
 - Add contract tests (`npm test`), `LICENSE`, `.gitignore`, and `CHANGELOG.md`.
 - Add npm/GitHub package metadata (`repository`, `homepage`, `bugs`, `keywords`).

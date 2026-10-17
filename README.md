@@ -18,10 +18,11 @@ A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin tha
 
 - **Live** — the badge updates as the host reports provider usage; no polling, no timers.
 - **Historically correct** — each request is priced by its **own wall-clock timestamp**, so a session that spans peak and off-peak stays accurate even if the page sits open overnight.
-- **Peak / off-peak tiers** — DeepSeek's official rule (peak = 2× off-peak, Beijing `09:00–12:00` and `14:00–18:00`) is the default, and every part is configurable (window, multiplier, time zone).
-- **Per-model accounting** — switching models mid-session keeps each model's tokens on its own price.
-- **Configurable prices** — override manually, or auto-fetch a JSON price document at boot.
-- **Non-invasive** — registers into the existing header utilities slot; renders nothing while there is no usage.
+- **Weekday-aware peak tiers** — DeepSeek bills peak only **Monday–Friday**; weekends are off-peak all day. The schedule is configurable (windows, weekdays, multiplier, time zone).
+- **Silent price sync** — a bundled price catalog plus an out-of-band remote catalog refreshed on an interval. Push a new `catalog/prices.json` and every installed copy picks it up **without a plugin release**; a failed refresh keeps the last good rates.
+- **Explicit peak/off-peak rates** — models may carry an explicit discounted pair (`cacheMiss` + `cacheMissOffPeak`), not just a multiplier.
+- **Route-aware matching** — `provider/model`, `provider/*`, `*`-model wildcards, and case/space/punctuation-insensitive model ids.
+- **Never fakes a number** — an unpriced route renders `未配置` (`unpriced`) instead of a made-up fallback rate.
 
 ## Install
 
@@ -41,7 +42,7 @@ dsh plugin --profile web add "link:E:/path/to/dsh-plugin-cost-meter"
 
 `link:` keeps the checkout live, so edits apply after a `dsh web` restart without reinstalling.
 
-Then restart the server:
+Restart the server afterwards:
 
 ```cmd
 dsh web
@@ -49,71 +50,82 @@ dsh web
 
 ## Configure
 
-Configuration lives on the profile plugin row. The bundled `cordis.patch.yml` inserts the row with defaults; override it by adding a `cost-meter` row with the same `id` in your profile's `cordis.patch.yml` (`~/.dsh/profiles/web/cordis.patch.yml`):
+The bundled `cordis.patch.yml` inserts the plugin row with defaults. Override it by adding a `cost-meter` row with the same `id` in your profile's `cordis.patch.yml` (`~/.dsh/profiles/web/cordis.patch.yml`):
 
 ```yaml
 - insert:
     - id: cost-meter
       name: dsh-plugin-cost-meter
       config:
-        currency: CNY                     # ISO 4217; default USD
-        pricingUrl: ""                    # optional JSON price source (URL or file path)
-        pricingTimeoutMs: 4000            # fetch timeout before falling back
-        models:                           # per-model OFF-PEAK rates, per 1M tokens
-          deepseek-flash:
-            inputPerM: 1.5                # uncached input
-            cacheReadPerM: 0.05           # cache-hit input
-            cacheWritePerM: 1.5           # cache-write input
-            outputPerM: 4.5               # output
-          deepseek-v4-pro:
-            inputPerM: 4.5
-            cacheReadPerM: 0.15
-            cacheWritePerM: 4.5
-            outputPerM: 13.5
-        default:                          # fallback for unlisted models
-          inputPerM: 1.5
-          cacheReadPerM: 0.05
-          cacheWritePerM: 1.5
-          outputPerM: 4.5
+        currency: CNY                 # display currency; empty = catalog currency
+        fx:
+          cnyPerUsd: 7.1              # used when the catalog is USD and you display CNY
+        catalogUrl: ""                # "" = this package's own catalog (derived from repository)
+        refreshMinutes: 360           # silent refresh interval; 0 disables it
+        pricingTimeoutMs: 4000
+        pricingUrl: ""                # optional legacy { models, default } document
+        models:                       # manual overrides (highest priority, display currency)
+          deepseek-official/deepseek-flash:
+            inputPerM: 1.06           # off-peak base
+            cacheReadPerM: 0.021
+            cacheWritePerM: 1.06
+            outputPerM: 4.26
+        default:                      # optional fallback; omit to report unknown routes as unpriced
+          inputPerM: 1
+          outputPerM: 4
         peak:
-          enabled: true                   # false ⇒ one flat (off-peak) rate
-          multiplier: 2                   # peak = off-peak × multiplier
-          timezoneOffsetMinutes: 480      # UTC+8 (Beijing)
-          windows: [[9, 12], [14, 18]]    # peak windows, local wall clock
+          enabled: true
+          multiplier: 2               # used only when a rate has no explicit off-peak value
+          timezoneOffsetMinutes: 480  # UTC+8
+          days: [1, 2, 3, 4, 5]       # ISO weekdays; weekends are off-peak
+          windows: [[9, 12], [14, 18]]
 ```
 
-Price resolution order (highest wins): **manual `config.models` / `config.default` → fetched `pricingUrl` document → bundled defaults**.
+Two rate styles are accepted everywhere:
 
-### Auto-fetching a price document
+- **Catalog style** (peak base + optional off-peak): `cacheMiss`, `cacheHit`, `cacheWrite`, `output`, and `cacheMissOffPeak`, `cacheHitOffPeak`, `cacheWriteOffPeak`, `outputOffPeak`.
+- **Legacy style** (off-peak base): `inputPerM`, `cacheReadPerM`, `cacheWritePerM`, `outputPerM` (with optional `*Peak` fields).
 
-DeepSeek does not publish a stable machine-readable price endpoint, so the plugin accepts any JSON document you host:
+## Automatic price updates
 
-```json
-{
-  "currency": "CNY",
-  "models": {
-    "deepseek-flash": { "inputPerM": 1.5, "cacheReadPerM": 0.05, "cacheWritePerM": 1.5, "outputPerM": 4.5 }
-  },
-  "default": { "inputPerM": 1.5, "cacheReadPerM": 0.05, "cacheWritePerM": 1.5, "outputPerM": 4.5 }
-}
-```
+Prices resolve in this order (highest wins):
 
-Point `config.pricingUrl` at an `https://` URL, a local path, or a `file://` URL. A failed fetch logs a warning and falls back to the bundled defaults.
+1. `config.models` / `config.default`
+2. `config.pricingUrl` (legacy document)
+3. the **remote catalog** at `config.catalogUrl` — default: this package's own `catalog/prices.json` on GitHub, derived from `package.json.repository`
+4. the **bundled** `catalog/prices.json` (offline fallback)
+
+A timer re-reads the remote catalog and `pricingUrl` every `refreshMinutes` (default 6 hours) and swaps the live table in place:
+
+- a failed refresh **keeps the last successful data**;
+- a source that never loaded does not clear anything;
+- a price change applies to the whole session on the **next event**, and immediately on a page reload.
+
+This makes the catalog the single place to maintain rates: **edit and push `catalog/prices.json`, and installed copies update themselves** — no new plugin release. Forks get their own update channel automatically because the default URL is derived from `package.json.repository`.
+
+To point at a private mirror or a local file, set `catalogUrl` (`https://…`, a path, or `file:///…`). Set it to `""` to disable remote syncing.
+
+## Peak / off-peak
+
+- Tiering uses the **request's own `event.time`**, never "now".
+- Peak applies only on the configured weekdays (`days`, default Monday–Friday); weekends are off-peak all day.
+- The schedule comes from the catalog's `peakSchedule` (time zone, days, windows, off-peak ratio) and can be overridden field by field in `config.peak`.
+- `peak.enabled: false` bills one flat rate; `peak.timezoneOffsetMinutes` shifts the wall clock for the window check.
+
+The hover tooltip shows the current tier, the multiplier, the route, and the token breakdown.
 
 ## Pricing model
 
-For every model the projection keeps two buckets — **off-peak** and **peak** — and the cost is:
-
 ```
-cost = Σ_models [ cost_off(m) + cost_peak(m) × multiplier ]
+cost = Σ_routes [ cost_off(route) + cost_peak(route) ]
 
-cost_tier(m) = (uncachedInput × inputPerM
-              + cacheRead     × cacheReadPerM
-              + cacheWrite    × cacheWritePerM
-              + output        × outputPerM) / 1_000_000
+cost_tier(route) = (uncachedInput × miss
+                  + cacheRead     × hit
+                  + cacheWrite    × write
+                  + output        × out) / 1_000_000
 ```
 
-The tier is chosen from the request's own `event.time` at fold time, so the stored state stays price-independent: editing prices and restarting re-prices cached buckets without replaying the log.
+Totals are accumulated per `{ provider, model }` route and per tier, so switching models mid-session keeps each route on its own price. A repeated usage sample for the same `(turn, step)` replaces the earlier one instead of double-counting.
 
 ## Compatibility
 
@@ -123,9 +135,7 @@ The tier is chosen from the request's own `event.time` at fold time, so the stor
 | Client deps | `@deepseek-ai/dsh-client-runtime` | `@deepseek-ai/dsh-client-ui-renderer`, `@deepseek-ai/dsh-client-ui-session` |
 | Compatibility gate | — | `engines.dsh` / `peerDependencies` must satisfy the running version |
 
-- A projection without `wire` registers **host-only** and never reaches the browser — the badge would render nothing, silently.
-- `engines.dsh` is declared as `>=0.1.5-rc.1 <1.0.0`; narrow ranges such as `^0.1.5-rc.1` are rejected by the 0.2.1 runtime gate.
-- The badge uses the additive `conversation.session.header.utilities` slot. `…header.corner` is a `single` slot already occupied by a shipped plugin, so it cannot be used.
+The badge uses the additive `conversation.session.header.utilities` slot; `…header.corner` is a `single` slot already occupied by a shipped plugin.
 
 ## Development
 
@@ -134,12 +144,13 @@ npm install
 npm test
 ```
 
-`test/contract.test.mjs` mocks the small slice of Cordis that `apply()` touches and drives the projection with synthetic session events (contract shape, peak/off-peak split, dedup, model switch, fallback pricing).
+`test/contract.test.mjs` covers the projection contract, weekday peak, catalog parsing, explicit dual rates, currency conversion, normalization/wildcards, unpriced routes, and manual overrides. It runs offline (`catalogUrl: ""`).
 
 ## Notes
 
-- Costs are **estimates**: they depend on the provider-reported `usage` and on your price table. DeepSeek currently bills peak/off-peak; keep `config.models` in sync with the official rates.
-- The badge is per-session. It does not aggregate sub-sessions or the whole account.
+- Costs are **estimates**: they depend on the provider-reported `usage` and on the price table.
+- The badge is **per session**; it does not aggregate sub-sessions or the whole account.
+- The bundled catalog is a dated snapshot — verify it against the [official pricing page](https://api-docs.deepseek.com/quick_start/pricing) and update `catalog/prices.json` when rates change.
 - The plugin is a Web surface plugin; compositions without `sessionProjections` (e.g. headless) skip registration.
 
 ## License
