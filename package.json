@@ -1,0 +1,70 @@
+{
+  "name": "dsh-cost-meter",
+  "version": "0.4.0",
+  "description": "Live per-session cost badge in the DeepSeek Harness conversation header (top-right), with peak/off-peak (峰谷分时) pricing.",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsh",
+    "deepseek",
+    "cost",
+    "pricing",
+    "token",
+    "usage",
+    "billing"
+  ],
+  "license": "MIT",
+  "author": "doubsumi",
+  "homepage": "https://github.com/doubsumi/dsh-cost-meter#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doubsumi/dsh-cost-meter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/doubsumi/dsh-cost-meter/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "cordis.patch.yml",
+    "README.zh.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "dsh": ">=0.1.5-rc.1 <1.0.0"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-session-projection": ">=0.1.5-rc.1 <1.0.0"
+  },
+  "scripts": {
+    "test": "node test/contract.test.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-session",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "platform": "web"
+    }
+  }
+}

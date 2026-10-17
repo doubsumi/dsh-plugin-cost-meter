@@ -1,0 +1,9 @@
+# dsh-cost-meter — profile-layer patch.
+#
+# Inserted when this package is installed as a bundle (`dsh plugin add`).
+# The row is intentionally config-free: set `config.currency` / `config.models`
+# / `config.peak` in your profile's own `cordis.patch.yml` (same id
+# `cost-meter`), which overrides this row by id.
+- insert:
+    - id: cost-meter
+      name: dsh-cost-meter
