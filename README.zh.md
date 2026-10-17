@@ -1,6 +1,6 @@
-# dsh-cost-meter
+# dsh-plugin-cost-meter
 
-[![npm version](https://img.shields.io/npm/v/dsh-cost-meter)](https://www.npmjs.com/package/dsh-cost-meter)
+[![npm version](https://img.shields.io/npm/v/dsh-plugin-cost-meter)](https://www.npmjs.com/package/dsh-plugin-cost-meter)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [English](README.md) | 中文
@@ -29,7 +29,7 @@
 ### 从 npm 安装（推荐）
 
 ```cmd
-dsh plugin --profile web add dsh-cost-meter
+dsh plugin --profile web add dsh-plugin-cost-meter
 ```
 
 插件声明了 `dsh.bundle`，`dsh plugin add` 会自动把它注册为 profile 层，**无需手写** `cordis.patch.yml`。
@@ -37,7 +37,7 @@ dsh plugin --profile web add dsh-cost-meter
 ### 本地源码安装
 
 ```cmd
-dsh plugin --profile web add "link:E:/path/to/dsh-cost-meter"
+dsh plugin --profile web add "link:E:/path/to/dsh-plugin-cost-meter"
 ```
 
 `link:` 方式下改源码后重启 `dsh web` 即可生效，不必重装。
@@ -55,7 +55,7 @@ dsh web
 ```yaml
 - insert:
     - id: cost-meter
-      name: dsh-cost-meter
+      name: dsh-plugin-cost-meter
       config:
         currency: CNY                     # ISO 4217，默认 USD
         pricingUrl: ""                    # 可选：JSON 计价源（URL 或本地路径）

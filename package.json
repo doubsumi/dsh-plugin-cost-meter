@@ -1,5 +1,5 @@
 {
-  "name": "dsh-cost-meter",
+  "name": "dsh-plugin-cost-meter",
   "version": "0.4.0",
   "description": "Live per-session cost badge in the DeepSeek Harness conversation header (top-right), with peak/off-peak (峰谷分时) pricing.",
   "keywords": [
@@ -15,13 +15,13 @@
   ],
   "license": "MIT",
   "author": "doubsumi",
-  "homepage": "https://github.com/doubsumi/dsh-cost-meter#readme",
+  "homepage": "https://github.com/doubsumi/dsh-plugin-cost-meter#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/doubsumi/dsh-cost-meter.git"
+    "url": "git+https://github.com/doubsumi/dsh-plugin-cost-meter.git"
   },
   "bugs": {
-    "url": "https://github.com/doubsumi/dsh-cost-meter/issues"
+    "url": "https://github.com/doubsumi/dsh-plugin-cost-meter/issues"
   },
   "type": "module",
   "main": "lib/index.js",

@@ -6,4 +6,4 @@
 # `cost-meter`), which overrides this row by id.
 - insert:
     - id: cost-meter
-      name: dsh-cost-meter
+      name: dsh-plugin-cost-meter

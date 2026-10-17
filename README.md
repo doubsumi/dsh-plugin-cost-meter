@@ -1,6 +1,6 @@
-# dsh-cost-meter
+# dsh-plugin-cost-meter
 
-[![npm version](https://img.shields.io/npm/v/dsh-cost-meter)](https://www.npmjs.com/package/dsh-cost-meter)
+[![npm version](https://img.shields.io/npm/v/dsh-plugin-cost-meter)](https://www.npmjs.com/package/dsh-plugin-cost-meter)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![dsh-plugin](https://img.shields.io/badge/topic-dsh--plugin-2ea44f)](https://github.com/topics/dsh-plugin)
 
@@ -28,7 +28,7 @@ A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin tha
 ### From npm (recommended)
 
 ```cmd
-dsh plugin --profile web add dsh-cost-meter
+dsh plugin --profile web add dsh-plugin-cost-meter
 ```
 
 The package declares `dsh.bundle`, so `dsh plugin add` activates it as a profile layer automatically — no manual `cordis.patch.yml` row is required.
@@ -36,7 +36,7 @@ The package declares `dsh.bundle`, so `dsh plugin add` activates it as a profile
 ### From a local checkout
 
 ```cmd
-dsh plugin --profile web add "link:E:/path/to/dsh-cost-meter"
+dsh plugin --profile web add "link:E:/path/to/dsh-plugin-cost-meter"
 ```
 
 `link:` keeps the checkout live, so edits apply after a `dsh web` restart without reinstalling.
@@ -54,7 +54,7 @@ Configuration lives on the profile plugin row. The bundled `cordis.patch.yml` in
 ```yaml
 - insert:
     - id: cost-meter
-      name: dsh-cost-meter
+      name: dsh-plugin-cost-meter
       config:
         currency: CNY                     # ISO 4217; default USD
         pricingUrl: ""                    # optional JSON price source (URL or file path)
