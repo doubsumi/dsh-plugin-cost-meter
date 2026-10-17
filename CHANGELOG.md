@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented here.
 
+## 0.5.2
+
+- The remote catalog's `peakSchedule` now overrides the bundled snapshot, so a
+  schedule change pushed to `catalog/prices.json` reaches installed copies
+  (previously the bundled schedule always won).
+- Header badge sizing fixed: `box-sizing: border-box`, `height: 24px`,
+  `border-radius: var(--dsw-radius-sm)` — the badge previously rendered
+  ~46px tall and no longer matched the header controls (e.g. the 24px
+  `.OMoRSG_split` control).
+
 ## 0.5.1
 
 - Manual `config.models` entries now outrank every automatic source even at

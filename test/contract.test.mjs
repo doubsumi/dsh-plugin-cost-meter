@@ -10,6 +10,10 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { apply, internals } from "../lib/index.js";
 
 const { buildPriceTable, isPeakAt, lookupPrice, resolveSchedule } = internals;
@@ -192,4 +196,27 @@ test("lookup prefers a specific route over a wildcard", () => {
   const matched = lookupPrice(table, "deepseek-official", "deepseek-flash");
   assert.equal(matched.model, "deepseek-flash");
   assert.equal(matched.rates.peak.miss, 0.3);
+});
+
+test("a remote catalog's peak schedule overrides the bundled snapshot", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "dsh-cost-meter-"));
+  const file = join(directory, "prices.json");
+  writeFileSync(file, JSON.stringify({
+    schema: 1,
+    currency: "USD",
+    providers: {
+      "deepseek-official": {
+        // Deliberately different from the bundled schedule (which also has 01:00-04:00).
+        peakSchedule: { timezone: "UTC", days: [1, 2, 3, 4, 5], windows: [{ from: "06:00", to: "10:00" }], offPeakRatio: 0.5 },
+        models: { "deepseek-flash": { cacheMiss: 0.3, output: 1.2 } }
+      }
+    }
+  }));
+
+  const definition = await register({ currency: "USD", catalogUrl: pathToFileURL(file).href });
+  // 02:00 UTC Monday is peak under the bundled schedule but off-peak under the remote one.
+  const value = fold(definition, usageEvent(Date.UTC(2026, 0, 5, 2), {
+    usage: { inputTokens: 1_000_000, outputTokens: 0 }
+  }));
+  assert.ok(Math.abs(value.cost - 0.15) < 1e-9, `cost ${value.cost} != 0.15 (remote schedule not applied)`);
 });
