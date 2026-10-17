@@ -145,6 +145,15 @@ test("manual config overrides the catalog and accepts per-model wildcards", asyn
   assert.ok(Math.abs(other.cost - 2) < 1e-9, `wildcard provider cost ${other.cost} != 2`);
 });
 
+test("manual config outranks the bundled catalog for the same route", async () => {
+  const definition = await register({
+    currency: "CNY",
+    models: { "deepseek-flash": { inputPerM: 100, outputPerM: 400 } }
+  });
+  const value = fold(definition, usageEvent(MON_20, { usage: { inputTokens: 1_000_000, outputTokens: 0 } }));
+  assert.ok(Math.abs(value.cost - 100) < 1e-9, `manual override cost ${value.cost} != 100`);
+});
+
 test("an unpriced route is reported, not billed at a made-up rate", async () => {
   const definition = await register({ currency: "USD", models: {} });
   const value = fold(definition, usageEvent(MON_20, {

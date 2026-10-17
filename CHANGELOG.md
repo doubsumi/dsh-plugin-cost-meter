@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here.
 
+## 0.5.1
+
+- Manual `config.models` entries now outrank every automatic source even at
+  equal specificity (previously a same-route catalog entry could win). Added a
+  regression test for the tie-break.
+
 ## 0.5.0
 
 - **Automatic silent price updates**: bundled `catalog/prices.json`, an
