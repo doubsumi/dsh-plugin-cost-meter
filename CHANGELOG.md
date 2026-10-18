@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented here.
 
+## 0.6.0
+
+- **Historical costs are now frozen.** An amount is computed and stored when
+  its usage sample is folded, and `wire.view` only sums the stored amounts.
+  Previously the view re-priced the whole token history with the live table,
+  so a price update (or a catalog refresh) rewrote past sessions' totals.
+  Price updates now apply to samples folded after them only.
+- Replacing a duplicated sample (`chunk` → `message`) subtracts the frozen
+  amount of the sample it replaces, so dedup stays exact.
+- The currency a session is counted in is stored with the state, so a later
+  `currency` change does not silently reinterpret old amounts.
+- Projection state bumped to `stateVersion 4`. The persisted projection cache
+  is invalidated once on upgrade, so every session is re-folded against the
+  current table at that moment (the same table the badge already displayed),
+  then frozen from there on.
+- Two regression tests: a price swap leaves counted samples untouched, and a
+  sample replacement subtracts exactly.
+
 ## 0.5.2
 
 - The remote catalog's `peakSchedule` now overrides the bundled snapshot, so a

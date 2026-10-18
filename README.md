@@ -99,7 +99,8 @@ A timer re-reads the remote catalog and `pricingUrl` every `refreshMinutes` (def
 
 - a failed refresh **keeps the last successful data**;
 - a source that never loaded does not clear anything;
-- a price change applies to the whole session on the **next event**, and immediately on a page reload.
+- **historical amounts are frozen**: a sample is priced when it is folded and the amount is stored, so a price change applies only to samples folded after it — a past session's total is never rewritten;
+- the frozen amounts ride the persisted projection cache, so they survive restarts; only a cold replay without a checkpoint prices the log at the then-current table.
 
 This makes the catalog the single place to maintain rates: **edit and push `catalog/prices.json`, and installed copies update themselves** — no new plugin release. Forks get their own update channel automatically because the default URL is derived from `package.json.repository`.
 

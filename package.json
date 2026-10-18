@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-cost-meter",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Live per-session cost badge in the DeepSeek Harness conversation header (top-right), with peak/off-peak (峰谷分时) pricing.",
   "keywords": [
     "dsh-plugin",

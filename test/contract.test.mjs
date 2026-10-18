@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { apply, internals } from "../lib/index.js";
 
-const { buildPriceTable, isPeakAt, lookupPrice, resolveSchedule } = internals;
+const { buildPriceTable, buildProjection, isPeakAt, lookupPrice, resolveSchedule } = internals;
 
 /** Capture the projection definition that `apply()` registers. */
 async function register(config = {}) {
@@ -67,7 +67,7 @@ test("implements the DSH >= 0.1.5 projection contract", async () => {
   assert.equal(typeof definition.stateSchema?.parse, "function");
   assert.equal(typeof definition.wire?.viewSchema?.parse, "function");
   assert.equal(typeof definition.wire?.view, "function");
-  assert.equal(definition.stateVersion, 3);
+  assert.equal(definition.stateVersion, 4);
   assert.equal(definition.schema, undefined);
   assert.equal(definition.view, undefined);
 });
@@ -219,4 +219,51 @@ test("a remote catalog's peak schedule overrides the bundled snapshot", async ()
     usage: { inputTokens: 1_000_000, outputTokens: 0 }
   }));
   assert.ok(Math.abs(value.cost - 0.15) < 1e-9, `cost ${value.cost} != 0.15 (remote schedule not applied)`);
+});
+
+test("a later price update never re-prices already counted samples", () => {
+  const schedule = resolveSchedule({}, undefined);
+  const catalog = (miss) => ({ currency: "USD", providers: { acme: { models: { "model-a": { cacheMiss: miss, output: 0 } } } } });
+  const firstTable = buildPriceTable({ bundled: catalog(1), config: {}, schedule });
+  const newTable = buildPriceTable({ bundled: catalog(5), config: {}, schedule });
+  const live = { current: { table: firstTable, schedule } };
+  const definition = buildProjection(live);
+  const parse = (state) => definition.wire.viewSchema.parse(definition.wire.view(definition.stateSchema.parse(JSON.parse(JSON.stringify(state)))));
+
+  const header = { type: "request/header", time: MON_10, data: { header: { config: { provider: "acme", model: "model-a" } } } };
+  const usage = (turn) => ({ type: "assistant/message", time: MON_10, data: { turn, step: 1, usage: { inputTokens: 1_000_000, outputTokens: 0 }, message: {} } });
+
+  let state = definition.init();
+  state = definition.apply(state, header);
+  state = definition.apply(state, usage(1));
+  const before = parse(state);
+  assert.ok(Math.abs(before.cost - 1) < 1e-9, `first cost ${before.cost} != 1`);
+
+  // A silent price refresh swaps the live table.
+  live.current = { table: newTable, schedule };
+
+  const after = parse(state);
+  assert.ok(Math.abs(after.cost - 1) < 1e-9, `history was re-priced to ${after.cost}`);
+
+  // Only the next sample uses the new price.
+  state = definition.apply(state, header);
+  state = definition.apply(state, usage(2));
+  const next = parse(state);
+  assert.ok(Math.abs(next.cost - 6) < 1e-9, `cost ${next.cost} != 6 (1 frozen + 5 at the new price)`);
+});
+
+test("replacing a sample subtracts its frozen amount exactly", () => {
+  const schedule = resolveSchedule({}, undefined);
+  const table = buildPriceTable({ bundled: { currency: "USD", providers: { acme: { models: { "model-a": { cacheMiss: 1, output: 0 } } } } }, config: {}, schedule });
+  const definition = buildProjection({ current: { table, schedule } });
+  const parse = (state) => definition.wire.viewSchema.parse(definition.wire.view(definition.stateSchema.parse(JSON.parse(JSON.stringify(state)))));
+
+  let state = definition.init();
+  state = definition.apply(state, { type: "request/header", time: MON_10, data: { header: { config: { provider: "acme", model: "model-a" } } } });
+  state = definition.apply(state, { type: "assistant/chunk", time: MON_10, data: { turn: 1, step: 1, chunk: { type: "usage", usage: { inputTokens: 1_000_000, outputTokens: 0 } } } });
+  assert.ok(Math.abs(parse(state).cost - 1) < 1e-9);
+  state = definition.apply(state, { type: "assistant/message", time: MON_10, data: { turn: 1, step: 1, usage: { inputTokens: 2_000_000, outputTokens: 0 }, message: {} } });
+  const value = parse(state);
+  assert.ok(Math.abs(value.cost - 2) < 1e-9, `cost ${value.cost} != 2 (the 1M chunk must be replaced, not added)`);
+  assert.equal(value.uncachedInputTokens, 2_000_000);
 });
